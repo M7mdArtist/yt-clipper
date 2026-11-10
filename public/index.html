@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>YouTube Clipper</title>
 
-    <!-- Loading the slider library from your local npm node_modules -->
     <link href="/npm/nouislider/dist/nouislider.min.css" rel="stylesheet" />
     <script src="/npm/nouislider/dist/nouislider.min.js"></script>
 
@@ -57,6 +56,14 @@
         border-color: #e50914;
       }
 
+      .row {
+        display: flex;
+        gap: 10px;
+      }
+      .row > * {
+        flex: 1;
+      }
+
       .time-inputs {
         display: flex;
         gap: 12px;
@@ -67,7 +74,6 @@
         font-family: monospace;
         font-size: 16px;
         letter-spacing: 1px;
-        transition: border 0.3s;
       }
 
       button {
@@ -81,9 +87,7 @@
         font-size: 16px;
         font-weight: bold;
         cursor: pointer;
-        transition:
-          background 0.3s,
-          opacity 0.3s;
+        transition: background 0.3s;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -96,21 +100,6 @@
         background: #444;
         color: #888;
         cursor: not-allowed;
-      }
-
-      .spinner {
-        display: none;
-        width: 18px;
-        height: 18px;
-        border: 3px solid rgba(255, 255, 255, 0.3);
-        border-radius: 50%;
-        border-top-color: #fff;
-        animation: spin 1s ease-in-out infinite;
-      }
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
       }
 
       #video-container {
@@ -144,13 +133,23 @@
         top: -6px !important;
         cursor: grab;
       }
-      .noUi-handle:active {
-        cursor: grabbing;
-        transform: scale(1.1);
-      }
-      .noUi-handle:before,
-      .noUi-handle:after {
+
+      /* Live Terminal Logs Box */
+      #terminal-logs {
         display: none;
+        margin-top: 15px;
+        background: #0a0a0a;
+        color: #00ff66;
+        font-family: monospace;
+        font-size: 12px;
+        text-align: left;
+        padding: 12px;
+        border-radius: 6px;
+        height: 120px;
+        overflow-y: auto;
+        border: 1px solid #333;
+        white-space: pre-wrap;
+        word-break: break-all;
       }
 
       #status {
@@ -187,15 +186,30 @@
         <input type="text" id="end" placeholder="End (00:00:00)" />
       </div>
 
-      <select id="format">
-        <option value="mp4">Video (MP4)</option>
-        <option value="mp3">Audio Only (MP3)</option>
-      </select>
+      <div class="row">
+        <select id="format" onchange="toggleQualityOptions()">
+          <option value="mp4">Video (MP4)</option>
+          <option value="mp3">Audio Only (MP3)</option>
+        </select>
 
-      <button id="downloadBtn" onclick="downloadVideo()" disabled>
-        <span class="spinner" id="btnSpinner"></span>
-        <span id="btnText">Cut & Download</span>
-      </button>
+        <!-- Quality Selectors -->
+        <select id="videoQuality">
+          <option value="fast">Best / Fastest (Single Stream)</option>
+          <option value="1080">1080p HD</option>
+          <option value="720">720p HD</option>
+          <option value="480">480p SD</option>
+        </select>
+
+        <select id="audioQuality" style="display: none">
+          <option value="192k">192 kbps (Standard)</option>
+          <option value="320k">320 kbps (High Quality)</option>
+          <option value="128k">128 kbps (Fastest)</option>
+        </select>
+      </div>
+
+      <button id="downloadBtn" onclick="startDownload()" disabled>Cut & Download</button>
+
+      <div id="terminal-logs"></div>
       <p id="status"></p>
 
       <div class="ai-note">⚠️ This tool was crafted by Artificial Intelligence.</div>
@@ -206,6 +220,19 @@
     <script>
       let player;
       let sliderInit = false;
+
+      function toggleQualityOptions() {
+        const format = document.getElementById('format').value;
+        const vQ = document.getElementById('videoQuality');
+        const aQ = document.getElementById('audioQuality');
+        if (format === 'mp3') {
+          vQ.style.display = 'none';
+          aQ.style.display = 'block';
+        } else {
+          vQ.style.display = 'block';
+          aQ.style.display = 'none';
+        }
+      }
 
       function extractVideoID(url) {
         const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
@@ -280,15 +307,12 @@
             step: 1,
             range: { min: 0, max: duration },
           });
-
           sliderInit = true;
         }
 
-        // Explicitly set default values to the beginning and end of the video immediately
         document.getElementById('start').value = formatTime(0);
         document.getElementById('end').value = formatTime(duration);
 
-        // Update inputs when sliding
         slider.noUiSlider.on('update', function (values) {
           if (document.activeElement.id !== 'start') {
             document.getElementById('start').value = formatTime(values[0]);
@@ -298,7 +322,6 @@
           }
         });
 
-        // Seek video when slider is released
         slider.noUiSlider.on('change', function (values, handle) {
           player.seekTo(values[handle]);
         });
@@ -320,58 +343,61 @@
         }
       });
 
-      async function downloadVideo() {
+      function startDownload() {
         const url = document.getElementById('url').value;
         const start = document.getElementById('start').value;
         const end = document.getElementById('end').value;
         const format = document.getElementById('format').value;
+        const quality =
+          format === 'mp3'
+            ? document.getElementById('audioQuality').value
+            : document.getElementById('videoQuality').value;
 
         const btn = document.getElementById('downloadBtn');
         const status = document.getElementById('status');
-        const spinner = document.getElementById('btnSpinner');
-        const btnText = document.getElementById('btnText');
+        const terminal = document.getElementById('terminal-logs');
 
         btn.disabled = true;
-        spinner.style.display = 'block';
-        btnText.innerText = 'Processing...';
-
+        terminal.style.display = 'block';
+        terminal.innerText = 'Initializing connection...\n';
         status.style.color = '#aaa';
-        status.innerText = 'Clipping and encoding on server. Please wait...';
+        status.innerText = 'Processing clip... Check live logs below.';
 
-        try {
-          const response = await fetch('/download', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url, start, end, format }),
-          });
+        const queryParams = new URLSearchParams({ url, start, end, format, quality });
+        const eventSource = new EventSource(`/api/clip?${queryParams.toString()}`);
 
-          if (response.ok) {
-            const blob = await response.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = downloadUrl;
+        eventSource.onmessage = function (event) {
+          const data = JSON.parse(event.data);
 
-            a.download = `youtube_clip.${format}`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(downloadUrl);
-
-            status.innerText = '✅ Downloaded successfully!';
-            status.style.color = '#4caf50';
-          } else {
-            const errData = await response.json();
-            status.innerText = `❌ ${errData.error || 'Error occurred during processing.'}`;
-            status.style.color = '#ff4a4a';
+          if (data.log) {
+            terminal.innerText += data.log;
+            terminal.scrollTop = terminal.scrollHeight; // Auto-scroll to bottom
           }
-        } catch (error) {
-          status.innerText = '❌ Failed to connect to server. Is it running?';
+
+          if (data.success) {
+            eventSource.close();
+            status.innerText = '✅ Download complete! Starting file download...';
+            status.style.color = '#4caf50';
+            btn.disabled = false;
+
+            // Trigger file download automatically
+            window.location.href = `/download-file/${data.file}`;
+          }
+
+          if (data.error) {
+            eventSource.close();
+            status.innerText = `❌ ${data.error}`;
+            status.style.color = '#ff4a4a';
+            btn.disabled = false;
+          }
+        };
+
+        eventSource.onerror = function () {
+          eventSource.close();
+          status.innerText = '❌ Connection lost with server.';
           status.style.color = '#ff4a4a';
-        } finally {
           btn.disabled = false;
-          spinner.style.display = 'none';
-          btnText.innerText = 'Cut & Download';
-        }
+        };
       }
     </script>
   </body>
