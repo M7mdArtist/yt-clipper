@@ -1,4 +1,3 @@
-````
 # YouTube Clipper Pro ✂️🎥
 
 A lightning-fast, self-hosted web application built with **Node.js**, **Express**, **yt-dlp**, and **FFmpeg** that allows you to preview, trim, and download custom clips from YouTube videos and **YouTube Shorts** as high-quality **MP4** videos or **MP3** audio files.
@@ -35,6 +34,7 @@ Before installing the project, make sure your server or local machine has the fo
   ```bash
   sudo pacman -S ffmpeg yt-dlp
   ```
+
 ````
 
 - **On Ubuntu / Debian:**
@@ -119,3 +119,4 @@ pm2 save
 ```
 
 ```
+````
