@@ -10,7 +10,6 @@ app.use('/npm', express.static(path.join(__dirname, 'node_modules')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Live streaming endpoint using Server-Sent Events (SSE)
 app.get('/api/clip', (req, res) => {
   const { url, start, end, format, quality } = req.query;
 
@@ -31,7 +30,6 @@ app.get('/api/clip', (req, res) => {
   let args = [];
 
   if (isAudio) {
-    // Audio quality configuration (e.g. 320k, 192k, 128k)
     args = [
       '-x',
       '--audio-format',
@@ -47,8 +45,7 @@ app.get('/api/clip', (req, res) => {
       url,
     ];
   } else {
-    // Video quality configuration based on user selection
-    let formatArg = 'best[ext=mp4]/best'; // Default fastest
+    let formatArg = 'best[ext=mp4]/best';
     if (quality === '1080') {
       formatArg = 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4][height<=1080]/best';
     } else if (quality === '720') {
@@ -94,7 +91,6 @@ app.get('/api/clip', (req, res) => {
   });
 });
 
-// Endpoint to securely download and instantly clean up the file
 app.get('/download-file/:filename', (req, res) => {
   const filename = req.params.filename;
   if (!filename.startsWith('clip_') || filename.includes('..')) {

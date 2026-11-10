@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>YouTube Clipper</title>
+    <title>YouTube Clipper Pro</title>
 
     <link href="/npm/nouislider/dist/nouislider.min.css" rel="stylesheet" />
     <script src="/npm/nouislider/dist/nouislider.min.js"></script>
@@ -29,7 +29,7 @@
         border-radius: 12px;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
         width: 100%;
-        max-width: 600px;
+        max-width: 650px;
         text-align: center;
         position: relative;
       }
@@ -56,6 +56,49 @@
         border-color: #e50914;
       }
 
+      #video-meta {
+        display: none;
+        background: #252525;
+        border-left: 4px solid #e50914;
+        padding: 10px 15px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+        text-align: left;
+      }
+      #meta-title {
+        font-weight: bold;
+        font-size: 14px;
+        color: #fff;
+        margin-bottom: 3px;
+      }
+      #meta-author {
+        font-size: 12px;
+        color: #aaa;
+      }
+
+      .presets {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .preset-btn {
+        background: #2a2a2a;
+        border: 1px solid #444;
+        color: #ccc;
+        padding: 6px 10px;
+        font-size: 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex: 1;
+        margin: 0;
+      }
+      .preset-btn:hover {
+        background: #3a3a3a;
+        color: #fff;
+        border-color: #e50914;
+      }
+
       .row {
         display: flex;
         gap: 10px;
@@ -76,7 +119,7 @@
         letter-spacing: 1px;
       }
 
-      button {
+      button.action-btn {
         width: 100%;
         padding: 14px;
         margin-top: 15px;
@@ -93,10 +136,10 @@
         align-items: center;
         gap: 10px;
       }
-      button:hover:not(:disabled) {
+      button.action-btn:hover:not(:disabled) {
         background: #b20710;
       }
-      button:disabled {
+      button.action-btn:disabled {
         background: #444;
         color: #888;
         cursor: not-allowed;
@@ -134,7 +177,6 @@
         cursor: grab;
       }
 
-      /* Live Terminal Logs Box */
       #terminal-logs {
         display: none;
         margin-top: 15px;
@@ -145,11 +187,50 @@
         text-align: left;
         padding: 12px;
         border-radius: 6px;
-        height: 120px;
+        height: 110px;
         overflow-y: auto;
         border: 1px solid #333;
         white-space: pre-wrap;
         word-break: break-all;
+      }
+
+      #history-section {
+        margin-top: 25px;
+        text-align: left;
+        border-top: 1px solid #333;
+        padding-top: 15px;
+        display: none;
+      }
+      .history-title {
+        font-size: 13px;
+        color: #aaa;
+        margin-bottom: 8px;
+        font-weight: bold;
+        text-transform: uppercase;
+      }
+      .history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 100px;
+        overflow-y: auto;
+      }
+      .history-item {
+        background: #252525;
+        padding: 6px 10px;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+      }
+      .history-item a {
+        color: #4caf50;
+        text-decoration: none;
+        font-weight: bold;
+      }
+      .history-item a:hover {
+        text-decoration: underline;
       }
 
       #status {
@@ -160,26 +241,35 @@
       }
 
       .ai-note {
-        margin-top: 25px;
-        font-size: 12px;
+        margin-top: 20px;
+        font-size: 11px;
         color: #666;
         text-transform: uppercase;
         letter-spacing: 1px;
-        border-top: 1px solid #333;
-        padding-top: 15px;
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <h2>YouTube Clipper ✂️</h2>
-      <input type="text" id="url" placeholder="Paste YouTube URL here..." oninput="handleUrlChange()" />
+      <h2>YouTube Clipper Pro ✂️</h2>
+      <input type="text" id="url" placeholder="Paste YouTube or Shorts URL here..." oninput="handleUrlChange()" />
+
+      <div id="video-meta">
+        <div id="meta-title">Loading title...</div>
+        <div id="meta-author">Channel Name</div>
+      </div>
 
       <div id="video-container">
         <div id="player"></div>
       </div>
 
       <div id="slider"></div>
+
+      <div class="presets" id="presetContainer" style="display: none">
+        <button class="preset-btn" onclick="setPreset(0, 15)">First 15s</button>
+        <button class="preset-btn" onclick="setPreset(0, 30)">First 30s</button>
+        <button class="preset-btn" onclick="setPresetFull()">Full Video/Short</button>
+      </div>
 
       <div class="time-inputs">
         <input type="text" id="start" placeholder="Start (00:00:00)" />
@@ -192,7 +282,6 @@
           <option value="mp3">Audio Only (MP3)</option>
         </select>
 
-        <!-- Quality Selectors -->
         <select id="videoQuality">
           <option value="fast">Best / Fastest (Single Stream)</option>
           <option value="1080">1080p HD</option>
@@ -207,10 +296,15 @@
         </select>
       </div>
 
-      <button id="downloadBtn" onclick="startDownload()" disabled>Cut & Download</button>
+      <button class="action-btn" id="downloadBtn" onclick="startDownload()" disabled>Cut & Download</button>
 
       <div id="terminal-logs"></div>
       <p id="status"></p>
+
+      <div id="history-section">
+        <div class="history-title">Recent Session Clips</div>
+        <div class="history-list" id="historyList"></div>
+      </div>
 
       <div class="ai-note">⚠️ This tool was crafted by Artificial Intelligence.</div>
     </div>
@@ -220,6 +314,7 @@
     <script>
       let player;
       let sliderInit = false;
+      let videoDuration = 0;
 
       function toggleQualityOptions() {
         const format = document.getElementById('format').value;
@@ -235,7 +330,9 @@
       }
 
       function extractVideoID(url) {
-        const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+        // Updated regex supporting both standard watch URLs, short links, and YouTube Shorts (/shorts/)
+        const regex =
+          /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|shorts\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
         const match = url.match(regex);
         return match ? match[1] : null;
       }
@@ -274,7 +371,9 @@
               width: '100%',
               videoId: vidId,
               playerVars: { rel: 0 },
-              events: { onReady: () => checkDuration() },
+              events: {
+                onReady: () => checkDuration(),
+              },
             });
           } else {
             player.loadVideoById(vidId);
@@ -284,13 +383,37 @@
       }
 
       function checkDuration() {
-        const duration = player.getDuration();
-        if (duration > 0) {
-          setupSlider(duration);
+        videoDuration = player.getDuration();
+        if (videoDuration > 0) {
+          setupSlider(videoDuration);
+          updateMetadata();
           document.getElementById('downloadBtn').disabled = false;
+          document.getElementById('presetContainer').style.display = 'flex';
         } else {
           setTimeout(checkDuration, 500);
         }
+      }
+
+      function updateMetadata() {
+        try {
+          const data = player.getVideoData();
+          document.getElementById('meta-title').innerText = data.title || 'YouTube Short / Video';
+          document.getElementById('meta-author').innerText = data.author || 'Unknown Channel';
+          document.getElementById('video-meta').style.display = 'block';
+        } catch (e) {
+          document.getElementById('video-meta').style.display = 'none';
+        }
+      }
+
+      function setPreset(startSec, durationSec) {
+        const endSec = Math.min(startSec + durationSec, videoDuration);
+        slider.noUiSlider.set([startSec, endSec]);
+        player.seekTo(startSec);
+      }
+
+      function setPresetFull() {
+        slider.noUiSlider.set([0, videoDuration]);
+        player.seekTo(0);
       }
 
       function setupSlider(duration) {
@@ -371,7 +494,7 @@
 
           if (data.log) {
             terminal.innerText += data.log;
-            terminal.scrollTop = terminal.scrollHeight; // Auto-scroll to bottom
+            terminal.scrollTop = terminal.scrollHeight;
           }
 
           if (data.success) {
@@ -380,8 +503,9 @@
             status.style.color = '#4caf50';
             btn.disabled = false;
 
-            // Trigger file download automatically
-            window.location.href = `/download-file/${data.file}`;
+            const downloadUrl = `/download-file/${data.file}`;
+            addToHistory(data.file, format);
+            window.location.href = downloadUrl;
           }
 
           if (data.error) {
@@ -398,6 +522,20 @@
           status.style.color = '#ff4a4a';
           btn.disabled = false;
         };
+      }
+
+      function addToHistory(filename, format) {
+        const section = document.getElementById('history-section');
+        const list = document.getElementById('historyList');
+        section.style.display = 'block';
+
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.innerHTML = `
+                <span>Clip (${format.toUpperCase()}) - ${new Date().toLocaleTimeString()}</span>
+                <a href="/download-file/${filename}" download>Download Again</a>
+            `;
+        list.prepend(item);
       }
     </script>
   </body>
