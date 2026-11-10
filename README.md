@@ -31,11 +31,10 @@ Before installing the project, make sure your server or local machine has the fo
 ### Installing System Dependencies
 
 - **On Arch Linux:**
+
   ```bash
   sudo pacman -S ffmpeg yt-dlp
   ```
-
-````
 
 - **On Ubuntu / Debian:**
 
@@ -115,8 +114,3 @@ pm2 save
 ## ⚠️ Disclaimer
 
 > This tool was crafted by Artificial Intelligence. It is intended for personal use and self-hosted environments. Please respect YouTube's Terms of Service and copyright regulations regarding content downloading.
-
-```
-
-```
-````
